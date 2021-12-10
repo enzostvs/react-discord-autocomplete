@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useKey } from 'react-use';
 
 import ListChannel from './ListChannel';
@@ -7,7 +7,6 @@ import ListUser from './ListUser';
 import { generateId, insert } from './../../utils/functions';
 
 import data from './../../api/data.json';
-import { useEffect } from 'react/cjs/react.development';
 
 const Autocomplete = ({ search, content, onSubmit = () => {}, onBlur = () => {}, onFocus = () => {} }) => {
 
