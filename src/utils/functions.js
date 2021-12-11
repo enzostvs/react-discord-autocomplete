@@ -20,4 +20,15 @@ const mention = (type) => {
 
 const generateId = () => `_${Math.random().toString(36).substr(2, 9)}`
 
-export { insert, mention, generateId }
+const getTypes = (nodeName) => {
+  switch (nodeName) {
+    case '#text':
+      return 'text';
+    case 'BR':
+      return 'row';
+    default:
+      return 'text';
+  }
+}
+
+export { insert, mention, getTypes, generateId }
