@@ -1,45 +1,79 @@
 import React, { useRef, forwardRef } from 'react';
 import { Mention, Row, Text } from './block';
 
-const ContentEditable = ({ content, onChange = () => {}, onClose = () => {} }, ref) => {
-  const state = useRef({ content, prevValue: null });
+import UTILS from './../utils';
+
+const ContentEditable = (
+  {
+    content,
+    search,
+    onChange = () => {},
+    onNewRow = () => {},
+    onFocus = () => {},
+    onSearch = () => {}
+  },
+  ref
+) => {
+  const state = useRef({ content, search, prevValue: null });
 
   if (JSON.stringify(state.current.prevValue) !== JSON.stringify(content)) {
     state.current.content = [ ...content ];
   }
+  const handleChange = (event) => {
+    const { target } = event;
 
-  const handleChange = (e) => {
-    const { target } = e
+    let changedElement = null;
+    const childNodes = Array.from(target.childNodes);
+    let newContent = JSON.parse(JSON.stringify(content));
 
-    if (e.key === 'Enter' && !e.shiftKey) return target.removeChild(target.lastChild)
+    childNodes.filter(node => node?.contentEditable !== 'false').forEach(node => {
+      const contentElementIndex = newContent.findIndex(content => content.id === node.id);
+      const notEqualElement = node.textContent !== newContent[contentElementIndex]?.value ? newContent[contentElementIndex] : null;
+      if (notEqualElement) changedElement = { item: notEqualElement, index: contentElementIndex };
 
-    let newContent = JSON.parse(JSON.stringify(state.current.content));
-    let changedElement;
-    let newRow = false;
-  
-    newContent = newContent.filter(content => Array.from(target.childNodes).map(element => element.id).includes(content.id));
+      const editableContent = content.findIndex(item => item.id === node.id);
+      if (editableContent !== -1) newContent[editableContent].value = node.textContent;
+    });
     
-    for (const element of target.childNodes) {
-      if (element.contentEditable === 'false') continue;
-      const notEqual = element.innerHTML !== newContent.find(content => content.id === element.id)?.value ?? false;
-      if (notEqual) {
-        const countBreak = Array.from(element.childNodes).some(element => element.nodeName === 'BR');
-        if (element?.children) Array.from(element.children).forEach(child => child && element?.removeChild(child));
-        newRow = countBreak;
-        changedElement = element.id
-      }
-      const contentIndex = newContent.findIndex(item => item.id === element.id)
-      if (newContent[contentIndex]) {
-        newContent[contentIndex].value = element.textContent;
-      }
-    }
+    if (changedElement) handleChangeElement(changedElement);
 
-    state.current.prevValue = newContent
-    onChange(newContent, changedElement, newRow)
+    state.current.prevValue = newContent;
+    onChange(newContent);
   }
 
-  const handleClose = (event) => {
-    if (['Escape', ' '].includes(event.key)) onClose()
+  const handleChangeElement = ({ item, index }) => {
+    const targetWord = item?.value?.match(/@\w+$/g)?.[0] ?? item?.value?.match(/#\w+$/g)?.[0] ?? '';
+
+    let type;
+    switch (targetWord.charAt(0)) {
+      case '@':
+        type = 'members';
+        break;
+      case '#':
+        type = 'channels';
+        break;
+      default:
+        type = null;
+    }
+
+    if (type) {
+      onSearch({ type, value: targetWord, character: targetWord.charAt(0), index })
+    } else {
+      onSearch(null)
+    }
+  }
+
+  const disabledKey = (event) => {
+    if (event.key === 'Backspace') {
+      if (event.target?.childNodes.length === 1 && [1].includes(event.target.childNodes[0].textContent?.length)) {
+        event.preventDefault();
+      }
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (event.shiftKey) return onNewRow();
+      console.warn('CALL FUNCTION TO SEND ALL CONTENT TO API')
+    }
   }
 
   const renderBlock = (block) => {
@@ -55,21 +89,31 @@ const ContentEditable = ({ content, onChange = () => {}, onClose = () => {} }, r
         return null
     }
   }
+  const allowedPlaceholder = () => content?.length === 1 && content[0].value === UTILS.SPECIAL_CHARACTER;
 
   return (
-    <div
-      contentEditable={true}
-      ref={ref}
-      suppressContentEditableWarning={true}
-      className="bg-gray-200 w-full p-5 mt-3 rounded-lg max-h-56 overflow-scroll outline-none text-white text-opacity-70"
-      onKeyUp={handleChange}
-      onKeyDown={handleClose}
-    >
-      { state.current.content.map((element, e) => (
-        <React.Fragment key={element.id}>
-          { renderBlock(element) }
-        </React.Fragment>
-      ))}
+    <div className="outline-none bg-gray-200 w-full p-5 mt-3 rounded-lg relative">
+      {allowedPlaceholder()}
+      { allowedPlaceholder() &&
+        <p className="text-white text-opacity-30 absolute top-5 left-5 w-full pointer-events-none">
+          Write your message here
+        </p>
+      }
+      <div
+        ref={ref}
+        id="content-editable"
+        contentEditable={true}
+        suppressContentEditableWarning={true}
+        className="max-h-56 overflow-scroll outline-none text-white text-opacity-70"
+        onInput={handleChange}
+        onKeyDown={disabledKey}
+      >
+        {state.current?.content?.map(item => (
+          <React.Fragment key={item.id}>
+            { renderBlock(item) }
+          </React.Fragment>
+        ))}
+      </div>
     </div>
   );
 };
