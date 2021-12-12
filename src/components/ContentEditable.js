@@ -9,16 +9,17 @@ const ContentEditable = (
     search,
     onChange = () => {},
     onNewRow = () => {},
-    onFocus = () => {},
-    onSearch = () => {}
+    onSearch = () => {},
   },
   ref
 ) => {
+
   const state = useRef({ content, search, prevValue: null });
 
   if (JSON.stringify(state.current.prevValue) !== JSON.stringify(content)) {
     state.current.content = [ ...content ];
   }
+
   const handleChange = (event) => {
     const { target } = event;
 
@@ -27,17 +28,30 @@ const ContentEditable = (
     let newContent = JSON.parse(JSON.stringify(content));
 
     childNodes.filter(node => node?.contentEditable !== 'false').forEach(node => {
+      const targetWord = node.textContent.match(/\*{2}(.*)\*{2}/g)?.[0]
+      
       const contentElementIndex = newContent.findIndex(content => content.id === node.id);
       const notEqualElement = node.textContent !== newContent[contentElementIndex]?.value ? newContent[contentElementIndex] : null;
+      const editableContent = content.findIndex(item => item.id === node.id);
+      
       if (notEqualElement) changedElement = { item: notEqualElement, index: contentElementIndex };
 
-      const editableContent = content.findIndex(item => item.id === node.id);
-      if (editableContent !== -1) newContent[editableContent].value = node.textContent;
+      if (editableContent !== -1) {
+        if (targetWord) {
+          const splittedValue = node.textContent.split(targetWord).filter(e => e !== '');
+
+          newContent[editableContent].value = splittedValue[0];
+          newContent[editableContent].id = UTILS.generateId();
+
+          const newElements = [{ type: 'text-bold', value: targetWord.replaceAll('**', '') , id: UTILS.generateId() }, { type: 'text', value: UTILS.SPECIAL_CHARACTER, id: UTILS.generateId() }];
+          newContent = UTILS.insert(newContent, contentElementIndex + 1, newElements)
+        } else {
+          newContent[editableContent].value = node.textContent;
+        }
+      }
     });
     
     if (changedElement) handleChangeElement(changedElement);
-
-    state.current.prevValue = newContent;
     onChange(newContent);
   }
 
@@ -65,9 +79,7 @@ const ContentEditable = (
 
   const disabledKey = (event) => {
     if (event.key === 'Backspace') {
-      if (event.target?.childNodes.length === 1 && [1].includes(event.target.childNodes[0].textContent?.length)) {
-        event.preventDefault();
-      }
+      if (event.target?.childNodes.length === 1 && [1].includes(event.target.childNodes[0].textContent?.length)) event.preventDefault();
     }
     if (event.key === 'Enter') {
       event.preventDefault();
@@ -80,6 +92,8 @@ const ContentEditable = (
     switch (block.type) {
       case 'text':
         return <Text data={block} />;
+      case 'text-bold':
+        return <Text data={block} strong={true} />;
       case 'channels':
       case 'members':
         return <Mention data={block} />;
@@ -91,9 +105,9 @@ const ContentEditable = (
   }
   const allowedPlaceholder = () => content?.length === 1 && content[0].value === UTILS.SPECIAL_CHARACTER;
 
+  console.log(content)
   return (
     <div className="outline-none bg-gray-200 w-full p-5 mt-3 rounded-lg relative">
-      {allowedPlaceholder()}
       { allowedPlaceholder() &&
         <p className="text-white text-opacity-30 absolute top-5 left-5 w-full pointer-events-none">
           Write your message here
