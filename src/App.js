@@ -35,10 +35,6 @@ function App() {
   
   const handleSearch = (searchValue) => setSearch(searchValue);
 
-  useEffect(() => {
-    if (content.at(-1)?.value === UTILS.SPECIAL_CHARACTER) handleFocus(Array.from(editableRef.current.childNodes).at(-1), 1);
-  }, [content])
-
   const filterData = () => {
     if (!search?.value) {
       setUsers(data.users);
@@ -57,6 +53,16 @@ function App() {
       Dict[search.type].call()
     }
   }
+
+  useEffect(() => {
+    const childNodes = Array.from(editableRef.current.childNodes);
+    if (content.at(-1)?.value === UTILS.SPECIAL_CHARACTER) handleFocus(childNodes.at(-1), 1);
+    if (childNodes.length === 1 && childNodes[0].nodeName === 'BR') {
+      editableRef.current.removeChild(childNodes[0]);
+      setContent([...content, { type: 'text', value: UTILS.SPECIAL_CHARACTER, id: UTILS.generateId() }]);
+    }
+  }, [content])
+
   useEffect(filterData, [search])
   
   const renderData = () => !search ? [] : search.type === 'channels' ? channels : users;
@@ -79,7 +85,6 @@ function App() {
           search={search}
           onChange={handleChangeContent}
           onNewRow={handleAddRow}
-          onFocus={handleFocus}
           onSearch={handleSearch}
         />
       </div>
