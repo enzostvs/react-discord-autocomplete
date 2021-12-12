@@ -15,7 +15,7 @@ const Mention = ({ data }) => {
     }
   }
   return (
-    <span id={state.current.data.id} contentEditable={false} className={`${mention(state.current.data.type)} mr-1`}>
+    <span id={state.current.data.id} contentEditable={false} className={`${mention(state.current.data.type)}`}>
       {renderType(state.current.data.type)}
       { state.current.data.data }
     </span>

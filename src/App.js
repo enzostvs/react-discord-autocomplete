@@ -1,35 +1,87 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ContentEditable from './components/ContentEditable'
 import Autocomplete from './components/autocomplete'
-import { generateId, getTypes } from './utils/functions';
+
+import UTILS from './utils';
+import data from './api/data.json';
 
 function App() {
-  const [content, setContent] = useState([
-    { type: 'text', value: '&#xFEFF;', id: generateId() },
-  ]);
+  const [content, setContent] = useState([{ type: 'text', value: UTILS.SPECIAL_CHARACTER, id: UTILS.generateId() }]);
   const [search, setSearch] = useState(null);
+
+  const [users, setUsers] = useState([data.users]);
+  const [channels, setChannels] = useState(data.channels);
   
   const editableRef = useRef(null);
 
   const handleChangeContent = (changedContent) => setContent(changedContent);
 
   const handleAddRow = () => {
-    setContent([...content, { type: 'row', id: generateId() }, { type: 'text', value: '&#xFEFF;', id: generateId() }]);
+    setContent([...content, { type: 'row', id: UTILS.generateId() }, { type: 'text', value: UTILS.SPECIAL_CHARACTER, id: UTILS.generateId() }]);
+    setSearch(null);
   }
 
-  const handleFocus = (selectedElement) => {
+  const handleFocus = (selectedElement, index = 1) => {
+    if (!selectedElement) return editableRef.current.focus();
     const range = document.createRange();
     const selection = window.getSelection();
-    range.setStart(selectedElement, 1);
+    range.setStart(selectedElement, index);
     range.collapse(true);
     selection.removeAllRanges();
     selection.addRange(range);
   }
 
+  const handleBlur = () => editableRef.current.blur();
+  
+  const handleSearch = (searchValue) => setSearch(searchValue);
+
+  useEffect(() => {
+    if (content.at(-1)?.value === UTILS.SPECIAL_CHARACTER) handleFocus(Array.from(editableRef.current.childNodes).at(-1), 1);
+  }, [content])
+
+  const filterData = () => {
+    if (!search?.value) {
+      setUsers(data.users);
+      setChannels(data.channels);
+    } else {
+      const Dict = {
+        channels: () => {
+          const filtered = data.channels.filter(channel => `${search.character}${channel.name.toLowerCase()}`.startsWith(search.value.toLowerCase()));
+          setChannels(filtered);
+        },
+        members: () => {
+          const filtered = data.users.filter(user => `${search.character}${user.username.toLowerCase()}`.startsWith(search.value.toLowerCase()));
+          setUsers(filtered)
+        }
+      }
+      Dict[search.type].call()
+    }
+  }
+  useEffect(filterData, [search])
+  
+  const renderData = () => !search ? [] : search.type === 'channels' ? channels : users;
+  
   return (
     <div className="bg-red-500 max-w-2xl mx-auto flex items-center justify-center h-full">
       <div className="w-full relative">
-        <ContentEditable ref={editableRef} content={content} onChange={handleChangeContent} onNewRow={handleAddRow} onFocus={handleFocus} />
+        {/* onSubmit={addToContent} onBlur={handleBlur} */}
+        <Autocomplete
+          search={search}
+          content={content}
+          data={renderData()}
+          onBlur={handleBlur}
+          onSubmit={handleChangeContent}
+          onSearch={handleSearch}
+        />
+        <ContentEditable
+          ref={editableRef}
+          content={content}
+          search={search}
+          onChange={handleChangeContent}
+          onNewRow={handleAddRow}
+          onFocus={handleFocus}
+          onSearch={handleSearch}
+        />
       </div>
     </div>
   );
