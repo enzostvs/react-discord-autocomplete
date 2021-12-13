@@ -105,7 +105,6 @@ const ContentEditable = (
   }
   const allowedPlaceholder = () => content?.length === 1 && content[0].value === UTILS.SPECIAL_CHARACTER;
 
-  console.log(content)
   return (
     <div className="outline-none bg-gray-200 w-full p-5 mt-3 rounded-lg relative">
       { allowedPlaceholder() &&
