@@ -33,6 +33,7 @@ const Autocomplete = ({ search, content, data, onSubmit = () => {}, onBlur = () 
   }
 
   const increment = (i) => {
+    if (!state.current.search?.value) return;
     onBlur()
     setSelected(selected => {
       const value = selected + i

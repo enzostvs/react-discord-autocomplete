@@ -10,7 +10,8 @@ const ListItem = ({ data, isSelected, index, onSelect = () => {}, onSubmit = () 
   }
   
   const handleSubmit = (data) => onSubmit({ id: data.id, data: data.username ?? data.name })
-  useKey('Enter', () => {
+  useKey('Enter', (e) => {
+    e.preventDefault();
     if (state.current.isSelected) handleSubmit(data);
   })
 
